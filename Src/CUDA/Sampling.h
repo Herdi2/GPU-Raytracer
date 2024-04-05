@@ -85,9 +85,9 @@ __device__ float2 random(unsigned pixel_index, unsigned bounce, unsigned sample_
 
 __device__ float sample_tent(float u) {
 	if (u < 0.5f) {
-		return safe_sqrt(2.0f * u) - 1.0f;
+		return sqrtf(2.0f * u) - 1.0f;
 	} else {
-		return 1.0f - safe_sqrt(2.0f - 2.0f * u);
+		return 1.0f - sqrtf(2.0f - 2.0f * u);
 	}
 }
 
@@ -122,10 +122,10 @@ __device__ float2 sample_disk(float u1, float u2) {
 	float phi, r;
 	if (a*a > b*b) {
 		r = a;
-		phi = 0.25f*PI * (b/a);
+		phi = (0.25f * PI) * (b/a);
 	} else {
 		r = b;
-		phi = 0.5f*PI - 0.25f*PI * (a/b);
+		phi = (0.25f * PI) * (a/b) + (0.5f * PI);
 	}
 
 	return r * sincos(phi);
@@ -133,21 +133,30 @@ __device__ float2 sample_disk(float u1, float u2) {
 
 __device__ float3 sample_cosine_weighted_direction(float u1, float u2) {
 	float2 d = sample_disk(u1, u2);
-	return make_float3(d.x, d.y, safe_sqrt(1.0f - dot(d, d)));
+	return make_float3(d.x, d.y, sqrtf(1.0f - dot(d, d)));
 }
 
 // Based on PBRT v3
-__device__ float3 sample_henyey_greenstein(float3 omega, float g, float u1, float u2) {
+__device__ float3 sample_henyey_greenstein(const float3 & omega, float g, float u1, float u2) {
 	float cos_theta;
 	if (fabsf(g) < 1e-3f) {
 		// Isotropic case
 		cos_theta = 1.0f - 2.0f * u1;
 	} else {
-		cos_theta = -(1.0f + g * g - square((1.0f - g * g) / (1.0f + g - 2.0f * g * u1))) / (2.0f * g);
+		float sqr_term = (1.0f - g * g) / (1.0f + g - 2.0f * g * u1);
+		cos_theta = -(1.0f + g * g - sqr_term * sqr_term) / (2.0f * g);
 	}
-	float sin_theta = safe_sqrt(1.0f - square(cos_theta));
-	float2 sincos_phi = sincos(TWO_PI * u2);
-	float3 direction = spherical_to_cartesian(sin_theta, cos_theta, sincos_phi.x, sincos_phi.y);
+	float sin_theta = safe_sqrt(1.0f - cos_theta * cos_theta);
+
+	float phi = TWO_PI * u2;
+	float sin_phi, cos_phi;
+	__sincosf(phi, &sin_phi, &cos_phi);
+
+	float3 direction = make_float3(
+		sin_theta * cos_phi,
+		sin_theta * sin_phi,
+		cos_theta
+	);
 
 	float3 v1, v2;
 	orthonormal_basis(omega, v1, v2);
@@ -156,7 +165,7 @@ __device__ float3 sample_henyey_greenstein(float3 omega, float g, float u1, floa
 }
 
 // Based on: Heitz - Sampling the GGX Distribution of Visible Normals
-__device__ float3 sample_visible_normals_ggx(float3 omega, float alpha_x, float alpha_y, float u1, float u2){
+__device__ float3 sample_visible_normals_ggx(const float3 & omega, float alpha_x, float alpha_y, float u1, float u2){
 	// Transform the view direction to the hemisphere configuration
 	float3 v = normalize(make_float3(alpha_x * omega.x, alpha_y * omega.y, omega.z));
 
@@ -168,7 +177,10 @@ __device__ float3 sample_visible_normals_ggx(float3 omega, float alpha_x, float 
 	// Parameterization of the projected area
 	float2 d = sample_disk(u1, u2);
 	float t1 = d.x;
-	float t2 = lerp(safe_sqrt(1.0f - t1*t1), d.y, 0.5f + 0.5f * v.z);
+	float t2 = d.y;
+
+	float s = 0.5f * (1.0f + v.z);
+	t2 = (1.0f - s) * sqrtf(1.0f - t1*t1) + s*t2;
 
 	// Reproject onto hemisphere
 	float3 n_h = t1*axis_1 + t2*axis_2 + safe_sqrt(1.0f - t1*t1 - t2*t2) * v;

@@ -36,7 +36,7 @@ struct BSDFDiffuse {
 		}
 	}
 
-	__device__ bool eval(float3 to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
+	__device__ bool eval(const float3 & to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
 		if (cos_theta_o <= 0.0f) return false;
 
 		bsdf = make_float3(cos_theta_o * ONE_OVER_PI);
@@ -95,7 +95,7 @@ struct BSDFPlastic {
 		}
 	}
 
-	__device__ bool eval(float3 to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
+	__device__ bool eval(const float3 & to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
 		if (cos_theta_o <= 0.0f) return false;
 
 		float3 omega_o = world_to_local(to_light, tangent, bitangent, normal);
@@ -144,7 +144,7 @@ struct BSDFPlastic {
 		if (rand_fresnel < F_i) {
 			// Sample specular component
 			omega_m = sample_visible_normals_ggx(omega_i, alpha_x, alpha_y, rand_brdf.x, rand_brdf.y);
-			omega_o = reflect_direction(omega_i, omega_m);
+			omega_o = reflect(-omega_i, omega_m);
 		} else {
 			// Sample diffuse component
 			omega_o = sample_cosine_weighted_direction(rand_brdf.x, rand_brdf.y);
@@ -216,7 +216,7 @@ struct BSDFDielectric {
 		// NO-OP
 	}
 
-	__device__ bool eval(float3 to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
+	__device__ bool eval(const float3 & to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
 		float3 omega_o = world_to_local(to_light, tangent, bitangent, normal);
 
 		bool reflected = omega_o.z >= 0.0f; // Positive sign means reflection, negative sign means transmission
@@ -322,9 +322,10 @@ struct BSDFDielectric {
 			reflected = rand_bsdf_0.y < F;
 
 			if (reflected) {
-				omega_o = reflect_direction(omega_i, omega_m);
+				omega_o = 2.0f * dot(omega_i, omega_m) * omega_m - omega_i;
 			} else {
-				omega_o = refract_direction(omega_i, omega_m, eta);
+				float k = 1.0f - eta*eta * (1.0f - square(dot(omega_i, omega_m)));
+				omega_o = (eta * dot(omega_i, omega_m) - safe_sqrt(k)) * omega_m - eta * omega_i;
 			}
 		} else {
 			// Sample multiple scatter component
@@ -425,7 +426,7 @@ struct BSDFConductor {
 		// NO-OP
 	}
 
-	__device__ bool eval(float3 to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
+	__device__ bool eval(const float3 & to_light, float cos_theta_o, float3 & bsdf, float & pdf) const {
 		if (cos_theta_o <= 0.0f) return false;
 
 		float3 omega_o = world_to_local(to_light, tangent, bitangent, normal);
@@ -477,7 +478,7 @@ struct BSDFConductor {
 		if (rand_brdf_0.x < E_i) {
 			// Sample single scatter component
 			omega_m = sample_visible_normals_ggx(omega_i, alpha_x, alpha_y, rand_brdf_1.x, rand_brdf_1.y);
-			omega_o = reflect_direction(omega_i, omega_m);
+			omega_o = reflect(-omega_i, omega_m);
 		} else {
 			// Sample multiple scatter component
 			omega_o = sample_cosine_weighted_direction(rand_brdf_1.x, rand_brdf_1.y);

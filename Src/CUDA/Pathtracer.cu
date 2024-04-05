@@ -230,7 +230,7 @@ extern "C" __global__ void kernel_sort(int bounce, int sample_index) {
 	float ray_cone_width;
 	if (bounce > 0 && config.enable_mipmapping) {
 		ray_cone_angle = ray_buffer_trace->cone_angle[index];
-		ray_cone_width = ray_buffer_trace->cone_width[index];
+		ray_cone_angle = ray_buffer_trace->cone_width[index];
 	}
 
 	unsigned pixel_index_and_flags = ray_buffer_trace->pixel_index_and_flags[index];
@@ -353,39 +353,38 @@ extern "C" __global__ void kernel_sort(int bounce, int sample_index) {
 
 	if (material_type == MaterialType::LIGHT) {
 		// Obtain the Light's position and normal
-		TrianglePos light_triangle = triangle_get_positions(hit.triangle_id);
+		TrianglePosNor light = triangle_get_positions_and_normals(hit.triangle_id);
 
 		float3 light_point;
-		triangle_barycentric(light_triangle, hit.u, hit.v, light_point);
+		float3 light_normal;
+		triangle_barycentric(light, hit.u, hit.v, light_point, light_normal);
 
 		float3 light_point_prev = light_point;
 
-		float3 light_geometric_normal = cross(light_triangle.position_edge_1, light_triangle.position_edge_2);
-
 		// Transform into world space
-		Matrix3x4 light_world = mesh_get_transform(hit.mesh_id);
-		matrix3x4_transform_position (light_world, light_point);
-		matrix3x4_transform_direction(light_world, light_geometric_normal);
-	
-		light_geometric_normal = normalize(light_geometric_normal);
+		Matrix3x4 world = mesh_get_transform(hit.mesh_id);
+		matrix3x4_transform_position (world, light_point);
+		matrix3x4_transform_direction(world, light_normal);
+
+		light_normal = normalize(light_normal);
 
 		if (bounce == 0 && config.enable_svgf) {
 			Matrix3x4 world_prev = mesh_get_transform_prev(hit.mesh_id);
 			matrix3x4_transform_position(world_prev, light_point_prev);
 
-			svgf_set_gbuffers(x, y, hit, light_point, light_geometric_normal, light_point_prev);
+			svgf_set_gbuffers(x, y, hit, light_point, light_normal, light_point_prev);
 		}
 
-		MaterialLight light_material = material_as_light(material_id);
+		MaterialLight material_light = material_as_light(material_id);
 
 		bool should_count_light_contribution = config.enable_next_event_estimation ? !allow_nee : true;
 		if (should_count_light_contribution) {
-			float3 illumination = throughput * light_material.emission;
+			float3 illumination = throughput * material_light.emission;
 
 			if (bounce == 0) {
 				aov_framebuffer_set(AOVType::ALBEDO,          pixel_index, make_float4(1.0f));
-				aov_framebuffer_set(AOVType::RADIANCE,        pixel_index, make_float4(light_material.emission));
-				aov_framebuffer_set(AOVType::RADIANCE_DIRECT, pixel_index, make_float4(light_material.emission));
+				aov_framebuffer_set(AOVType::RADIANCE,        pixel_index, make_float4(material_light.emission));
+				aov_framebuffer_set(AOVType::RADIANCE_DIRECT, pixel_index, make_float4(material_light.emission));
 			} else if (bounce == 1) {
 				aov_framebuffer_add(AOVType::RADIANCE,        pixel_index, make_float4(illumination));
 				aov_framebuffer_add(AOVType::RADIANCE_DIRECT, pixel_index, make_float4(illumination));
@@ -397,18 +396,18 @@ extern "C" __global__ void kernel_sort(int bounce, int sample_index) {
 		}
 
 		if (config.enable_multiple_importance_sampling) {
-			float cos_theta_light = abs_dot(ray_direction, light_geometric_normal);
+			float cos_theta_light = fabsf(dot(ray_direction, light_normal));
 			float distance_to_light_squared = hit.t * hit.t;
 
 			float brdf_pdf = ray_buffer_trace->last_pdf[index];
 
-			float light_power = luminance(light_material.emission.x, light_material.emission.y, light_material.emission.z);
+			float light_power = luminance(material_light.emission.x, material_light.emission.y, material_light.emission.z);
 			float light_pdf   = light_power * distance_to_light_squared / (cos_theta_light * lights_total_weight);
 
 			if (!pdf_is_valid(light_pdf)) return;
 
 			float mis_weight = power_heuristic(brdf_pdf, light_pdf);
-			float3 illumination = throughput * light_material.emission * mis_weight;
+			float3 illumination = throughput * material_light.emission * mis_weight;
 
 			assert(bounce != 0);
 			aov_framebuffer_add(AOVType::RADIANCE, pixel_index, make_float4(illumination));
@@ -423,9 +422,19 @@ extern "C" __global__ void kernel_sort(int bounce, int sample_index) {
 
 	if (russian_roulette(pixel_index, bounce, sample_index, throughput)) return;
 
-	auto material_buffer_write = [bounce, ray_direction, medium_id, ray_cone_angle, ray_cone_width, hit, pixel_index, throughput](
+	unsigned flags = (medium_id != INVALID) << 30;
+
+	auto material_buffer_write = [](
+		int                  bounce,
 		PackedMaterialBuffer packed_material_buffer,
-		int                * buffer_size
+		int                * buffer_size,
+		const float3       & ray_direction,
+		int                  medium_id,
+		float                ray_cone_angle,
+		float                ray_cone_width,
+		const RayHit         hit,
+		unsigned             pixel_index_and_flags,
+		const float3       & throughput
 	) {
 		MaterialBufferAllocation material_buffer = get_material_buffer(packed_material_buffer);
 
@@ -447,32 +456,43 @@ extern "C" __global__ void kernel_sort(int bounce, int sample_index) {
 
 		material_buffer.buffer->hits.set(index_out, hit);
 
-		unsigned flags = (medium_id != INVALID) << 30;
-		material_buffer.buffer->pixel_index_and_flags[index_out] = pixel_index | flags;
-
+		material_buffer.buffer->pixel_index_and_flags[index_out] = pixel_index_and_flags;
 		if (bounce > 0) {
 			material_buffer.buffer->throughput.set(index_out, throughput);
 		}
 	};
+
 	switch (material_type) {
-		case MaterialType::DIFFUSE:    material_buffer_write(material_buffer_diffuse,    &buffer_sizes.diffuse   [bounce]); break;
-		case MaterialType::PLASTIC:    material_buffer_write(material_buffer_plastic,    &buffer_sizes.plastic   [bounce]); break;
-		case MaterialType::DIELECTRIC: material_buffer_write(material_buffer_dielectric, &buffer_sizes.dielectric[bounce]); break;
-		case MaterialType::CONDUCTOR:  material_buffer_write(material_buffer_conductor,  &buffer_sizes.conductor [bounce]); break;
+		case MaterialType::DIFFUSE: {
+			material_buffer_write(bounce, material_buffer_diffuse, &buffer_sizes.diffuse[bounce], ray_direction, medium_id, ray_cone_angle, ray_cone_width, hit, pixel_index | flags, throughput);
+			break;
+		}
+		case MaterialType::PLASTIC: {
+			material_buffer_write(bounce, material_buffer_plastic, &buffer_sizes.plastic[bounce], ray_direction, medium_id, ray_cone_angle, ray_cone_width, hit, pixel_index | flags, throughput);
+			break;
+		}
+		case MaterialType::DIELECTRIC: {
+			material_buffer_write(bounce, material_buffer_dielectric, &buffer_sizes.dielectric[bounce], ray_direction, medium_id, ray_cone_angle, ray_cone_width, hit, pixel_index | flags, throughput);
+			break;
+		}
+		case MaterialType::CONDUCTOR: {
+			material_buffer_write(bounce, material_buffer_conductor, &buffer_sizes.conductor[bounce], ray_direction, medium_id, ray_cone_angle, ray_cone_width, hit, pixel_index | flags, throughput);
+			break;
+		}
 	}
 }
 
 template<typename BSDF>
 __device__ void next_event_estimation(
-	int          pixel_index,
-	int          bounce,
-	int          sample_index,
-	const BSDF & bsdf,
-	int          medium_id,
-	float3       hit_point,
-	float3       normal,
-	float3       geometric_normal,
-	float3       throughput
+	int            pixel_index,
+	int            bounce,
+	int            sample_index,
+	const BSDF   & bsdf,
+	int            medium_id,
+	const float3 & hit_point,
+	const float3 & normal,
+	const float3 & geometric_normal,
+	float3       & throughput
 ) {
 	float2 rand_light    = random<SampleDimension::NEE_LIGHT>   (pixel_index, bounce, sample_index);
 	float2 rand_triangle = random<SampleDimension::NEE_TRIANGLE>(pixel_index, bounce, sample_index);
@@ -484,40 +504,36 @@ __device__ void next_event_estimation(
 	// Pick random point on the Light
 	float2 light_uv = sample_triangle(rand_triangle.x, rand_triangle.y);
 
-	// Obtain the Light's position and geometric normal
-	TrianglePos light_triangle = triangle_get_positions(light_triangle_id);
+	// Obtain the Light's position and normal
+	TrianglePosNor light = triangle_get_positions_and_normals(light_triangle_id);
 
 	float3 light_point;
-	triangle_barycentric(light_triangle, light_uv.x, light_uv.y, light_point);
-
-	float3 light_geometric_normal = cross(light_triangle.position_edge_1, light_triangle.position_edge_2);
+	float3 light_normal;
+	triangle_barycentric(light, light_uv.x, light_uv.y, light_point, light_normal);
 
 	// Transform into world space
 	Matrix3x4 light_world = mesh_get_transform(light_mesh_id);
 	matrix3x4_transform_position (light_world, light_point);
-	matrix3x4_transform_direction(light_world, light_geometric_normal);
+	matrix3x4_transform_direction(light_world, light_normal);
 
-	light_geometric_normal = normalize(light_geometric_normal);
-
-	hit_point   = ray_origin_epsilon_offset(hit_point, light_point - hit_point, geometric_normal);
-	light_point = ray_origin_epsilon_offset(light_point, hit_point - light_point, light_geometric_normal);
+	light_normal = normalize(light_normal);
 
 	float3 to_light = light_point - hit_point;
 	float distance_to_light = length(to_light);
 	to_light /= distance_to_light;
 
-	float cos_theta_light = abs_dot(to_light, light_geometric_normal);
+	float cos_theta_light = abs_dot(to_light, light_normal);
 	float cos_theta_hit = dot(to_light, normal);
 
 	int light_material_id = mesh_get_material_id(light_mesh_id);
-	MaterialLight light_material = material_as_light(light_material_id);
+	MaterialLight material_light = material_as_light(light_material_id);
 
 	float3 bsdf_value;
 	float  bsdf_pdf;
 	bool valid = bsdf.eval(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
 	if (!valid) return;
 
-	float light_power = luminance(light_material.emission.x, light_material.emission.y, light_material.emission.z);
+	float light_power = luminance(material_light.emission.x, material_light.emission.y, material_light.emission.z);
 	float light_pdf   = light_power * square(distance_to_light) / (cos_theta_light * lights_total_weight);
 
 	if (!pdf_is_valid(light_pdf)) return;
@@ -529,23 +545,21 @@ __device__ void next_event_estimation(
 		mis_weight = 1.0f;
 	}
 
-	float3 illumination = throughput * bsdf_value * light_material.emission * mis_weight / light_pdf;
+	float3 illumination = throughput * bsdf_value * material_light.emission * mis_weight / light_pdf;
 
-	/*
 	// If inside a Medium, apply absorption and out-scattering
 	if (medium_id != INVALID) {
 		HomogeneousMedium medium = medium_as_homogeneous(medium_id);
 		float3 sigma_t = medium.sigma_a + medium.sigma_s;
 		illumination *= beer_lambert(sigma_t, distance_to_light);
 	}
-	*/
 
 	// Emit Shadow Ray
 	int shadow_ray_index = atomicAdd(&buffer_sizes.shadow[bounce], 1);
 
-	ray_buffer_shadow.traversal_data.ray_origin   .set(shadow_ray_index, hit_point);
+	ray_buffer_shadow.traversal_data.ray_origin   .set(shadow_ray_index, ray_origin_epsilon_offset(hit_point, to_light, geometric_normal));
 	ray_buffer_shadow.traversal_data.ray_direction.set(shadow_ray_index, to_light);
-	ray_buffer_shadow.traversal_data.max_distance[shadow_ray_index] = distance_to_light;
+	ray_buffer_shadow.traversal_data.max_distance[shadow_ray_index] = distance_to_light - 2.0f * EPSILON;
 	ray_buffer_shadow.illumination_and_pixel_index[shadow_ray_index] = make_float4(
 		illumination.x,
 		illumination.y,

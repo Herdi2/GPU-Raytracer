@@ -9,7 +9,7 @@ __device__ Texture<float> lut_dielectric_albedo_leave;
 __device__ Texture<float> lut_conductor_directional_albedo;
 __device__ Texture<float> lut_conductor_albedo;
 
-__device__ inline float3 fresnel_multiscatter(float3 F_avg, float E_avg) {
+__device__ inline float3 fresnel_multiscatter(const float3 & F_avg, float E_avg) {
 	return F_avg*F_avg * E_avg / (make_float3(1.0f) - F_avg * (1.0f - E_avg));
 }
 
@@ -111,9 +111,10 @@ extern "C" __global__ void kernel_integrate_dielectric(bool entering_material, S
 
 		float3 omega_o;
 		if (reflected) {
-			omega_o = reflect_direction(omega_i, omega_m);
+			omega_o = 2.0f * dot(omega_i, omega_m) * omega_m - omega_i;
 		} else {
-			omega_o = refract_direction(omega_i, omega_m, eta);
+			float k = 1.0f - eta*eta * (1.0f - square(dot(omega_i, omega_m)));
+			omega_o = (eta * abs_dot(omega_i, omega_m) - safe_sqrt(k)) * omega_m - eta * omega_i;
 		}
 
 		if (reflected ^ (omega_o.z >= 0.0f)) return 0.0f; // Hemisphere check: reflection should have positive z, transmission negative z
@@ -196,7 +197,7 @@ extern "C" __global__ void kernel_integrate_conductor(float * lut_directional_al
 		float alpha_y = roughness_to_alpha(linear_roughness);
 
 		float3 omega_m = sample_visible_normals_ggx(omega_i, alpha_x, alpha_y, rand_brdf.x, rand_brdf.y);
-		float3 omega_o = reflect_direction(omega_i, omega_m);
+		float3 omega_o = reflect(-omega_i, omega_m);
 
 		if (dot(omega_o, omega_m) <= 0.0f || omega_o.z <= 0.0f) return 0.0f;
 

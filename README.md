@@ -2,7 +2,6 @@
 
 ![Stormtrooper](Screenshots/stormtrooper.png "Stormtrooper")
 ![Monster](Screenshots/monster-under-bed.png "Monster Under Bed")
-![Sir Muttonchop](Screenshots/sir-muttonchop.png "Sir Muttonchop")
 
 Interactive CUDA pathtracer that implements a variety of rendering techniques. 
 
@@ -47,13 +46,16 @@ SVGF: Raw output of the pathtracer on the left and the filtered result on the ri
 Kulla Conty Multiscatter for dielectrics comparison: at the top single scatter, at the bottom multiscatter approximation.
 
 ![Staircase](Screenshots/Staircase.png "Staircase Scene")
-![Marble](Screenshots/marble.png "Marble")
-![Still-Life](Screenshots/still-life.png "Still Life")
-![LEGO Bulldozer](Screenshots/lego-bulldozer.png "LEGO Bulldozer")
+![Editor](Screenshots/Editor.png "Interactive Scene editor")
 ![Glass-of-Water](Screenshots/glass-of-water.png "Glass of Water")
 ![Kitchen](Screenshots/kitchen.png "Kitchen")
+![Bunny](Screenshots/bunny.png "Furry Bunny")
+![Lone-Monk](Screenshots/lone-monk.png "Lone Monk")
+![Dragon](Screenshots/dragon.png "Dragon")
 ![Candles](Screenshots/candles.png "Candles")
-![Editor](Screenshots/Editor.png "Interactive Scene editor")
+![Still-Life](Screenshots/still-life.png "Still Life")
+![Marble](Screenshots/marble.png "Marble")
+![LEGO Bulldozer](Screenshots/lego-bulldozer.png "LEGO Bulldozer")
 
 For more screenshots, see the Screenshots folder
 
@@ -95,5 +97,3 @@ The project requires that the ```CUDA_PATH``` system variable is set to the path
 - [Blender Demos](https://www.blender.org/download/demo-files/)
 
 - [Luxcore Demos](https://luxcorerender.org/example-scenes/)
-
-- [Sir Muttonchop by Rico Cilliers](https://www.artstation.com/artwork/VdJ8b4) 
