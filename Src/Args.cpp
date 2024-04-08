@@ -59,7 +59,7 @@ static void parse_args(const Array<StringView> & args, Allocator * allocator) {
 			IO::exit(1);
 		}
 	});
-
+	options.emplace_back("MF"_sv,"max_frames"_sv, "Sets the max amount of frames"_sv,					   1, [](const Array<StringView>& args, size_t i)  { int max_frames = parse_arg_int(args[i + 1]); cpu_config.max_frames = max_frames > 0 ? max_frames : -1; });
 	options.emplace_back("W"_sv, "width"_sv,   "Sets the width of the window"_sv,                          1, [](const Array<StringView> & args, size_t i) { cpu_config.initial_width       = parse_arg_int(args[i + 1]); });
 	options.emplace_back("H"_sv, "height"_sv,  "Sets the height of the window"_sv,                         1, [](const Array<StringView> & args, size_t i) { cpu_config.initial_height      = parse_arg_int(args[i + 1]); });
 	options.emplace_back("b"_sv, "bounce"_sv,  "Sets the number of pathtracing bounces"_sv,                1, [](const Array<StringView> & args, size_t i) { gpu_config.num_bounces         = Math::clamp(parse_arg_int(args[i + 1]), 0, MAX_BOUNCES - 1); });

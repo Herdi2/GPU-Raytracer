@@ -49,6 +49,7 @@ struct CPUConfig {
 	bool enable_scene_update      = false;
 
 	MipmapFilterType mipmap_filter = MipmapFilterType::BOX;
+	int max_frames = -1;
 
 	BVHType bvh_type = BVHType::BVH8;
 

@@ -357,6 +357,8 @@ static void draw_gui(Window & window, Integrator & integrator) {
 			size_t time_in_minutes = time_in_seconds / 60;
 			size_t time_in_hours   = time_in_minutes / 60;
 
+			if (cpu_config.max_frames != -1 && integrator.sample_index > cpu_config.max_frames) exit(0);
+
 			ImGui::Text("Frame: %i", integrator.sample_index);
 			ImGui::Text("Time:  %0.2llu:%0.2llu:%0.2llu", time_in_hours, time_in_minutes % 60, time_in_seconds % 60);
 			ImGui::Text("Delta: %.2f ms (%i fps)", 1000.0f * timing.delta_time, timing.fps);
