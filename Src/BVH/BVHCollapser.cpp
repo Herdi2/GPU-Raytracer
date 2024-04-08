@@ -1,6 +1,7 @@
 #include "BVHCollapser.h"
 
 #include "Core/BitArray.h"
+#include "Core/IO.h"
 
 struct CollapseCost {
 	int   primitive_count;
@@ -92,6 +93,7 @@ static void bvh_collapse(const BVH2 & bvh, BVH2 & new_bvh, int new_index, BitArr
 }
 
 void BVHCollapser::collapse(BVH2 & bvh) {
+	IO::print("BVHCOLLAPSER COLLAPSING!\n"_sv);
 	// Calculate costs of collapse, and fill array with the decision to collapse, yes or no
 	BitArray collapse(bvh.nodes.size());
 	collapse.set_all(false);

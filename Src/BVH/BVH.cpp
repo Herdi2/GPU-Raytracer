@@ -10,6 +10,7 @@
 #include "BVH/Converters/BVH8Converter.h"
 
 #include "BVH/BVHOptimizer.h"
+#include <iostream>
 
 BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 	IO::print("Constructing BVH...\r"_sv);

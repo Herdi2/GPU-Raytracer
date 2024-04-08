@@ -67,6 +67,7 @@ struct Integrator {
 	int screen_width;
 	int screen_height;
 	int screen_pitch;
+	int amount_of_nodes = 0; // Added -Herdi
 
 	int pixel_count;
 

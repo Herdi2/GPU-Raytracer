@@ -5,6 +5,7 @@
 
 #include "Core/Array.h"
 #include "Core/OwnPtr.h"
+#include "io.h"
 
 typedef unsigned char byte;
 

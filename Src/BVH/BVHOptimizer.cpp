@@ -70,6 +70,8 @@ static void select_nodes_random(const BVH2 & bvh, const Array<int> & parent_indi
 }
 
 // Produces a single batch consisting of 'batch_size' candidates for reinsertion based on which Nodes have the highest inefficiency measure
+// Uses all three measurement criterias from Bittner et. al. (2012) to optimize BVH constructed using SAH
+// https://dspace.cvut.cz/bitstream/handle/10467/15603/2013-Fast-Insertion-Based-Optimization-of-Bounding-Volume-Hierarchies.pdf -Herdi
 static void select_nodes_measure(const BVH2 & bvh, const Array<int> & parent_indices, int batch_size, Allocator * allocator, Array<int> & batch_indices) {
 	Array<float> costs(bvh.nodes.size(), allocator);
 
@@ -249,6 +251,7 @@ void BVHOptimizer::optimize(BVH2 & bvh) {
 
 	float sah_cost_best = cost_before;
 
+	// SAH OPTIMIZATION
 	enum struct NodeSelectionMethod {
 		RANDOM,
 		MEASURE

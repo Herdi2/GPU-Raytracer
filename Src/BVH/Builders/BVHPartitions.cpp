@@ -2,6 +2,7 @@
 
 #include "Renderer/Mesh.h"
 #include "Renderer/Triangle.h"
+#include "Core/IO.h"
 
 // Evaluates SAH for every object for every dimension to determine splitting candidate
 template<typename GetAABB>
@@ -13,6 +14,8 @@ ObjectSplit partition_sah_impl(GetAABB get_aabb, int first_index, int index_coun
 	split.aabb_left  = AABB::create_empty();
 	split.aabb_right = AABB::create_empty();
 
+	// This is where the SAH cost calculations happen 
+	// It seems that the equation form cost is areaRight*objectsRight + areaLeft*objectsLeft -Herdi
 	// Check splits along all 3 dimensions
 	for (int dimension = 0; dimension < 3; dimension++) {
 		AABB aabb_left  = AABB::create_empty();
@@ -96,6 +99,8 @@ void BVHPartitions::triangle_intersect_plane(Vector3 vertices[3], int dimension,
 }
 
 SpatialSplit BVHPartitions::partition_spatial(const Array<Triangle> & triangles, const Array<PrimitiveRef> indices[3], int first_index, int index_count, float * sah, AABB bounds) {
+	// We use a binning of 256 split planes -Herdi
+	// Seems to be along each axis
 	SpatialSplit split = { };
 	split.cost = INFINITY;
 	split.index     = -1;

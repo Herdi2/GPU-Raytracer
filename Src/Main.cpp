@@ -21,6 +21,7 @@
 
 #include "Util/Util.h"
 #include "Util/PerfTest.h"
+#include <iostream>
 
 extern "C" { _declspec(dllexport) unsigned NvOptimusEnablement = true; } // Forces NVIDIA driver to be used
 
@@ -345,6 +346,12 @@ static void draw_gui(Window & window, Integrator & integrator) {
 	window.gui_begin();
 
 	if (ImGui::Begin("Config")) {
+
+		// OWN METRICS
+		if (ImGui::CollapsingHeader("node_count", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Text("node_count: %i", integrator.amount_of_nodes);
+		}
+
 		if (ImGui::CollapsingHeader("Performance", ImGuiTreeNodeFlags_DefaultOpen)) {
 			size_t time_in_seconds = size_t(double(timing.now - timing.start) * timing.inv_perf_freq);
 			size_t time_in_minutes = time_in_seconds / 60;

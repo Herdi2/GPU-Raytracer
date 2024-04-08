@@ -1,4 +1,5 @@
 #include "BVH4Converter.h"
+#include "Core/IO.h"
 
 void BVH4Converter::convert() {
 	bvh4.nodes.resize(bvh2.nodes.size());
@@ -71,6 +72,8 @@ void BVH4Converter::convert() {
 		}
 	} else {
 		// Collapse tree top-down, starting from the root
+		// The algorithm used here seems to be the top-down recursive splitting from https://graphics.stanford.edu/~boulos/papers/multi_rt08.pdf
+		// -Herdi
 		collapse(0);
 	}
 
@@ -78,8 +81,8 @@ void BVH4Converter::convert() {
 }
 
 void BVH4Converter::collapse(int node_index) {
+	IO::print("BVH4CONVERTER COLLAPSING!\n"_sv);
    	BVHNode4 & node = bvh4.nodes[node_index];
-
 	while (true) {
 		int child_count = node.get_child_count();
 
