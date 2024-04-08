@@ -1,0 +1,6 @@
+max_frames 200
+width 600
+height 400
+force-rebuild
+bvh bvh8
+scene C:\Users\Herdi\Desktop\GPU-Raytracer-1.3.0\GPU-Raytracer-1.3.0\Data\cornellbox\scene.xml
