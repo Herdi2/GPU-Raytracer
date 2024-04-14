@@ -14,6 +14,32 @@
 
 #include "Core/IO.h"
 
+
+void print_cwbvh(const BVH8& bvh, int node_index = 0) {
+	const BVHNode8& node = bvh.nodes[node_index];
+
+	for (int i = 0; i < 8; i++) {
+		bool node_is_leaf = (node.meta[i] & 0b11111) < 24;
+		if (node_is_leaf) {
+			int first_triangle = node.meta[i] & 0b11111;
+
+			for (int j = 0; j < __popcnt(node.meta[i] >> 5); j++) {
+				printf("Node %i - Triangle: %i\n", node_index, node.base_index_triangle + first_triangle + j);
+			}
+		}
+		else {
+			int child_offset = node.meta[i] & 0b11111;
+			int child_index = node.base_index_child + child_offset - 24;
+
+			printf("Node %i - Child %i:\n", node_index, child_index);
+
+			print_cwbvh(bvh, child_index);
+		}
+	}
+
+	printf("\n");
+}
+
 void print_node_info(Array<BVHNode2> nodes) {
 	
 	IO::print(cpu_config.bvh_type == BVHType::BVH ? "BVH2 Node count: {}\n"_sv : "SBVH Node count: {}\n"_sv, nodes.size());
@@ -22,25 +48,14 @@ void print_node_info(Array<BVHNode2> nodes) {
 }
 
 void print_node_info(Array<BVHNode4> nodes) {
-	// Even though the amount of nodes loaded into the GPU is equal to
-	// the amount of nodes for BVH2, the used nodes are less
-	// Empty nodes are not removed from the node array
-	size_t empty_node_count = 0;
 	double child_count = 0;
 	for (size_t i = 0; i < nodes.size(); i++) {
 		const auto& node = nodes[i];
-		if (node.get_count(0) == 0 && node.get_index(0) == 0 &&
-			node.get_count(1) == 0 && node.get_index(1) == 0 &&
-			node.get_count(2) == 0 && node.get_index(2) == 0 &&
-			node.get_count(3) == 0 && node.get_index(3) == 0) {
-			empty_node_count++;
-		}
-		else {
-			child_count += node.get_child_count();
-		}
+		child_count += node.get_child_count();
+
 	}
-	IO::print("BVH4 Node count: {}\n"_sv, nodes.size() - empty_node_count);
-	IO::print("BVH4 Average branching factor: {}\n"_sv, child_count / (nodes.size() - empty_node_count));
+	IO::print("BVH4 Node count: {}\n"_sv, nodes.size());
+	IO::print("BVH4 Average branching factor: {}\n"_sv, child_count / nodes.size());
 }
 
 void print_node_info(Array<BVHNode8> nodes) {
@@ -54,6 +69,7 @@ void print_node_info(Array<BVHNode8> nodes) {
 			}
 		}
 	}
+
 	IO::print("BVH8 Average branching factor: {}\n"_sv, child_count / nodes.size());
 }
 
@@ -108,6 +124,7 @@ OwnPtr<BVH> BVH::create_from_bvh2(BVH2 bvh) {
 				BVH8Converter(*bvh8.get(), bvh).convert();
 			}
 			print_node_info(bvh8.get()->nodes);
+			//print_cwbvh(*bvh8.get());
 			return bvh8;
 		}
 		default: ASSERT_UNREACHABLE();
