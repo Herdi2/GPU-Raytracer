@@ -44,12 +44,15 @@ Window::Window(const String & title, int width, int height) {
 		IO::exit(1);
 	}
 
+#if false
+	// No need to print out -Herdi
 	IO::print("OpenGL Info:\n"_sv);
 	IO::print("Version:  {}\n"_sv, reinterpret_cast<const char *>(glGetString(GL_VERSION)));
 	IO::print("GLSL:     {}\n"_sv, reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 	IO::print("Vendor:   {}\n"_sv, reinterpret_cast<const char *>(glGetString(GL_VENDOR)));
 	IO::print("Renderer: {}\n"_sv, reinterpret_cast<const char *>(glGetString(GL_RENDERER)));
 	IO::print('\n');
+#endif
 
 #if false
 	glEnable(GL_DEBUG_OUTPUT);

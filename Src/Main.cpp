@@ -23,6 +23,11 @@
 #include "Util/PerfTest.h"
 #include <iostream>
 
+template <typename T> T MAX(T x, T y)
+{
+	return (x > y) ? x : y;
+}
+
 extern "C" { _declspec(dllexport) unsigned NvOptimusEnablement = true; } // Forces NVIDIA driver to be used
 
 static constexpr int FRAMETIME_HISTORY_LENGTH = 100;
@@ -47,6 +52,10 @@ struct Timing {
 	double min;
 	double max;
 	double history[FRAMETIME_HISTORY_LENGTH];
+
+	double kernel_primary_avg;
+	double kernel_bounce0_avg;
+	double kernel_bounce1_avg;
 
 	int frame_index;
 } static timing;
@@ -128,6 +137,18 @@ int main(int num_args, char ** args) {
 
 	// Render loop
 	while (!window.is_closed) {
+
+		// Print out timing info -Herdi
+		if (cpu_config.max_frames != -1 && integrator->sample_index > cpu_config.max_frames) {
+			IO::print("Delta time avg: {} ms\n"_sv, timing.avg*1000);
+			IO::print("Delta time min: {} ms\n"_sv, timing.min*1000);
+			IO::print("Delta time max: {} ms\n"_sv, timing.max*1000);
+			IO::print("Primary avg: {} ms\n"_sv, timing.kernel_primary_avg * 1000);
+			IO::print("Bounce 0 avg: {} ms\n"_sv, timing.kernel_bounce0_avg * 1000);			
+			IO::print("Bounce 1 avg: {} ms\n"_sv, timing.kernel_bounce1_avg * 1000);
+			exit(0);
+		}
+
 		perf_test.frame_begin();
 
 		if (integrator_change_requested) {
@@ -352,7 +373,6 @@ static void draw_gui(Window & window, Integrator & integrator) {
 			size_t time_in_minutes = time_in_seconds / 60;
 			size_t time_in_hours   = time_in_minutes / 60;
 
-			if (cpu_config.max_frames != -1 && integrator.sample_index > cpu_config.max_frames) exit(0);
 
 			ImGui::Text("Frame: %i", integrator.sample_index);
 			ImGui::Text("Time:  %0.2llu:%0.2llu:%0.2llu", time_in_hours, time_in_minutes % 60, time_in_seconds % 60);
@@ -369,7 +389,7 @@ static void draw_gui(Window & window, Integrator & integrator) {
 			}
 		}
 
-		if (ImGui::CollapsingHeader("Kernel Timings") && integrator.event_pool.num_used > 0) {
+		if (ImGui::CollapsingHeader("Kernel Timings", ImGuiTreeNodeFlags_DefaultOpen) && integrator.event_pool.num_used > 0) {
 			struct EventTiming {
 				const CUDAEvent::Desc * desc;
 				float                   timing;
@@ -414,6 +434,18 @@ static void draw_gui(Window & window, Integrator & integrator) {
 					}
 
 					bool category_visible = ImGui::TreeNode(event_timings[i].desc->category.data(), "%s: %.2f ms", event_timings[i].desc->category.data(), time_sum);
+					if (!strcmp(event_timings[i].desc->category.data(), "Primary")) {
+						timing.kernel_primary_avg += time_sum;
+						timing.kernel_primary_avg /= timing.frame_index;
+					}
+					if (!strcmp(event_timings[i].desc->category.data(), "Bounce 0")) {
+						timing.kernel_bounce0_avg += time_sum;
+						timing.kernel_bounce0_avg /= timing.frame_index;
+					}
+					if (!strcmp(event_timings[i].desc->category.data(), "Bounce 1")) {
+						timing.kernel_bounce1_avg += time_sum;
+						timing.kernel_bounce1_avg /= timing.frame_index;
+					}
 					if (!category_visible) {
 						// Skip ahead to next category
 						i = j;

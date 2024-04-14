@@ -70,11 +70,13 @@ void CUDAContext::init() {
 
 	int driver_version = 0;
 	CUDACALL(cuDriverGetVersion(&driver_version));
-
+#if false
+	// GPU info not needed for benchmarking -Herdi
 	IO::print("CUDA Info:\n"_sv);
 	IO::print("CUDA Version: {}.{}\n"_sv, driver_version / 1000, (driver_version % 1000) / 10);
 	IO::print("Compute Capability: {}\n"_sv, compute_capability);
 	IO::print("Memory available: {} MB\n"_sv, total_memory >> 20);
+
 
 	switch (config_cache) {
 		case CU_FUNC_CACHE_PREFER_NONE:   IO::print("Cache Config: Prefer None\n"_sv);   break;
@@ -90,6 +92,7 @@ void CUDAContext::init() {
 	}
 
 	IO::print('\n');
+#endif
 }
 
 void CUDAContext::free() {
