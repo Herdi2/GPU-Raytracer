@@ -46,20 +46,21 @@ struct GPUConfig {
 	// Pathtracing
 	int num_bounces = 10;
 
-	bool enable_mipmapping                   = true;
-	bool enable_next_event_estimation        = true;
-	bool enable_multiple_importance_sampling = true;
-	bool enable_russian_roulette             = true;
+	// All possible optimizations are disabled, as to focus solely on the underlying acceleration structures -Herdi
+	bool enable_mipmapping                   = false;
+	bool enable_next_event_estimation        = false;
+	bool enable_multiple_importance_sampling = false;
+	bool enable_russian_roulette             = false;
 	bool enable_svgf                         = false;
-	bool enable_spatial_variance             = true;
-	bool enable_taa                          = true;
+	bool enable_spatial_variance             = false;
+	bool enable_taa                          = false;
 
 
 	// SVGF
 	float alpha_colour = 0.1f;
 	float alpha_moment = 0.1f;
 
-	int num_atrous_iterations = 6;
+	int num_atrous_iterations = 0;
 
 	float sigma_z =  4.0f;
 	float sigma_n = 16.0f;

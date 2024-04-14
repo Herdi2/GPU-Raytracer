@@ -15,8 +15,10 @@
 #include "Core/IO.h"
 
 void print_node_info(Array<BVHNode2> nodes) {
-	IO::print("BVH2 Node count: {}\n"_sv, nodes.size());
-	IO::print("BVH2 Average branching factor: 2\n"_sv); // Per definition, since every space is split into two, or made a leaf
+	
+	IO::print(cpu_config.bvh_type == BVHType::BVH ? "BVH2 Node count: {}\n"_sv : "SBVH Node count: {}\n"_sv, nodes.size());
+	// Per definition, since every space is split into two, or made a leaf
+	IO::print(cpu_config.bvh_type == BVHType::BVH ? "BVH2 Average branching factor: 2 {}\n"_sv : "SBVH Average branching factor: 2{}\n"_sv); 
 }
 
 void print_node_info(Array<BVHNode4> nodes) {
@@ -91,8 +93,10 @@ OwnPtr<BVH> BVH::create_from_bvh2(BVH2 bvh) {
 		case BVHType::BVH4: {
 			// Collapse binary BVH into 4-way BVH
 			OwnPtr<BVH4> bvh4 = make_owned<BVH4>();
-			ScopeTimer timer("BVH4 Converter"_sv);
-			BVH4Converter(*bvh4.get(), bvh).convert();
+			{
+				ScopeTimer timer("BVH4 Converter"_sv);
+				BVH4Converter(*bvh4.get(), bvh).convert();
+			}
 			print_node_info(bvh4.get()->nodes);
 			return bvh4;
 		}

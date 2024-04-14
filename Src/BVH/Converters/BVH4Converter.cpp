@@ -74,6 +74,10 @@ void BVH4Converter::convert() {
 	} else {
 		// Collapse tree top-down, starting from the root
 		collapse(0);
+		// Possible optimization, remove recursion from collapse() as well -Herdi
+		//for (size_t i = 0; i < bvh4.nodes.size(); i++) {
+		//	collapse(i);
+		//}
 	}
 
 	bvh4.indices = bvh2.indices; // NOTE: copy

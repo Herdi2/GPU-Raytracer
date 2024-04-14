@@ -30,8 +30,8 @@ enum struct BVHType {
 };
 
 struct CPUConfig {
-	int initial_width  = 900;
-	int initial_height = 600;
+	int initial_width  = 1024;
+	int initial_height = 768;
 
 	Array<String> scene_filenames;
 	String        sky_filename;
@@ -45,7 +45,7 @@ struct CPUConfig {
 
 	bool bvh_force_rebuild        = false;
 	bool enable_bvh_optimization  = false;
-	bool enable_block_compression = true;
+	bool enable_block_compression = true; // Focused on texture, not important for us
 	bool enable_scene_update      = false;
 	bool enable_bvh_collapse	  = false;
 
@@ -54,6 +54,7 @@ struct CPUConfig {
 
 	BVHType bvh_type = BVHType::BVH8;
 
+	// Only used for collapsing and optimization
 	float sah_cost_node = 4.0f;
 	float sah_cost_leaf = 1.0f;
 
