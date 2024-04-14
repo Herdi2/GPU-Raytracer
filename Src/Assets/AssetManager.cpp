@@ -54,45 +54,44 @@ Handle<MeshData> AssetManager::add_mesh_data(String filename, String bvh_filenam
 
 	mesh_data_handle = new_mesh_data();
 
-	ThreadPool::submit([this, filename = std::move(filename), bvh_filename = std::move(bvh_filename), fallback_loader = std::move(fallback_loader), mesh_data_handle]() mutable {
-		BVH2     bvh       = { };
-		MeshData mesh_data = { };
+	// Removed threadworker pool, so now construction is not done on parallell threads -Herdi
+	BVH2     bvh       = { };
+	MeshData mesh_data = { };
 
-		bool bvh_loaded = BVHLoader::try_to_load(filename, bvh_filename, &mesh_data, &bvh);
-		if (!bvh_loaded) {
-			mesh_data.triangles = fallback_loader(filename, nullptr);
+	bool bvh_loaded = BVHLoader::try_to_load(filename, bvh_filename, &mesh_data, &bvh);
+	if (!bvh_loaded) {
+		mesh_data.triangles = fallback_loader(filename, nullptr);
 
-			if (mesh_data.triangles.size() == 0) {
-				// FIXME: Right now empty MeshData is handled by inserting a dummy Triangle
-				Triangle triangle = Triangle(
-					Vector3(-1.0f, -1.0f, 0.0f),
-					Vector3( 0.0f, +1.0f, 0.0f),
-					Vector3(+1.0f, -1.0f, 0.0f),
-					Vector3(0.0f, 0.0f, 1.0f),
-					Vector3(0.0f, 0.0f, 1.0f),
-					Vector3(0.0f, 0.0f, 1.0f),
-					Vector2(0.0f, 1.0f),
-					Vector2(0.5f, 0.0f),
-					Vector2(1.0f, 1.0f)
-				);
-				mesh_data.triangles = { triangle };
-			}
-
-			bvh = BVH::create_from_triangles(mesh_data.triangles);
-			BVHLoader::save(bvh_filename, mesh_data, bvh);
+		if (mesh_data.triangles.size() == 0) {
+			// FIXME: Right now empty MeshData is handled by inserting a dummy Triangle
+			Triangle triangle = Triangle(
+				Vector3(-1.0f, -1.0f, 0.0f),
+				Vector3( 0.0f, +1.0f, 0.0f),
+				Vector3(+1.0f, -1.0f, 0.0f),
+				Vector3(0.0f, 0.0f, 1.0f),
+				Vector3(0.0f, 0.0f, 1.0f),
+				Vector3(0.0f, 0.0f, 1.0f),
+				Vector2(0.0f, 1.0f),
+				Vector2(0.5f, 0.0f),
+				Vector2(1.0f, 1.0f)
+			);
+			mesh_data.triangles = { triangle };
 		}
 
-		if (cpu_config.bvh_type != BVHType::BVH8) {
-			BVHCollapser::collapse(bvh);
-		}
+		bvh = BVH::create_from_triangles(mesh_data.triangles);
+		BVHLoader::save(bvh_filename, mesh_data, bvh);
+	}
 
-		mesh_data.bvh = BVH::create_from_bvh2(std::move(bvh));
+	if (cpu_config.bvh_type != BVHType::BVH8 && cpu_config.enable_bvh_collapse) {
+		BVHCollapser::collapse(bvh);
+	}
 
-		{
-			MutexLock lock(mesh_datas_mutex);
-			get_mesh_data(mesh_data_handle) = std::move(mesh_data);
-		}
-	});
+	mesh_data.bvh = BVH::create_from_bvh2(std::move(bvh));
+
+	{
+		MutexLock lock(mesh_datas_mutex);
+		get_mesh_data(mesh_data_handle) = std::move(mesh_data);
+	}
 
 	return mesh_data_handle;
 }
@@ -100,18 +99,16 @@ Handle<MeshData> AssetManager::add_mesh_data(String filename, String bvh_filenam
 Handle<MeshData> AssetManager::add_mesh_data(Array<Triangle> triangles) {
 	Handle<MeshData> mesh_data_handle = new_mesh_data();
 
-	ThreadPool::submit([this, triangles = std::move(triangles), mesh_data_handle]() mutable {
-		BVH2 bvh = BVH::create_from_triangles(triangles);
+	BVH2 bvh = BVH::create_from_triangles(triangles);
 
-		MeshData mesh_data = { };
-		mesh_data.triangles = std::move(triangles);
-		mesh_data.bvh = BVH::create_from_bvh2(std::move(bvh));
+	MeshData mesh_data = { };
+	mesh_data.triangles = std::move(triangles);
+	mesh_data.bvh = BVH::create_from_bvh2(std::move(bvh));
 
-		{
-			MutexLock mutex(mesh_datas_mutex);
-			get_mesh_data(mesh_data_handle) = std::move(mesh_data);
-		}
-	});
+	{
+		MutexLock mutex(mesh_datas_mutex);
+		get_mesh_data(mesh_data_handle) = std::move(mesh_data);
+	}
 
 	return mesh_data_handle;
 }

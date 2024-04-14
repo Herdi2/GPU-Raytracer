@@ -119,7 +119,6 @@ void Integrator::init_geometry() {
 		mesh_data_triangle_offsets[i] = aggregated_triangle_count;
 		mesh_data_index_offsets   [i] = aggregated_index_count;
 
-		amount_of_nodes += scene.asset_manager.mesh_datas[i].bvh->node_count();
 		aggregated_bvh_node_count += scene.asset_manager.mesh_datas[i].bvh->node_count();
 		aggregated_triangle_count += scene.asset_manager.mesh_datas[i].triangles.size();
 		aggregated_index_count    += scene.asset_manager.mesh_datas[i].bvh->indices.size();;

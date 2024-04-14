@@ -12,6 +12,7 @@ void BVH4Converter::convert() {
 			continue;
 		}
 
+		// Converting the binary tree to a quaternary tree (Nothing else is done here)
 		if (!bvh2.nodes[i].is_leaf()) {
 			const BVHNode2 & child_left  = bvh2.nodes[bvh2.nodes[i].left];
 			const BVHNode2 & child_right = bvh2.nodes[bvh2.nodes[i].left + 1];
@@ -72,16 +73,13 @@ void BVH4Converter::convert() {
 		}
 	} else {
 		// Collapse tree top-down, starting from the root
-		// The algorithm used here seems to be the top-down recursive splitting from https://graphics.stanford.edu/~boulos/papers/multi_rt08.pdf
-		// -Herdi
 		collapse(0);
 	}
 
 	bvh4.indices = bvh2.indices; // NOTE: copy
 }
-
+// SAH collapsing based only on merging a child node into its parent -Herdi
 void BVH4Converter::collapse(int node_index) {
-	IO::print("BVH4CONVERTER COLLAPSING!\n"_sv);
    	BVHNode4 & node = bvh4.nodes[node_index];
 	while (true) {
 		int child_count = node.get_child_count();

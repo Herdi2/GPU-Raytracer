@@ -39,7 +39,7 @@ struct SpatialSplit {
 
 // Contains various ways to parition space into "left" and "right" as well as helper methods
 namespace BVHPartitions {
-	inline constexpr int SBVH_BIN_COUNT = 256;
+	inline constexpr int SBVH_BIN_COUNT = 32;
 
 	ObjectSplit partition_sah(const Array<Triangle> & triangles, int * indices[3], int first_index, int index_count, float * sah);
 	ObjectSplit partition_sah(const Array<Mesh>     & meshes,    int * indices[3], int first_index, int index_count, float * sah);

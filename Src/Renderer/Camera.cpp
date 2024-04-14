@@ -76,6 +76,7 @@ void Camera::update(float delta) {
 	if (Input::is_key_pressed(SDL_SCANCODE_F)) {
 		IO::print("camera.position = Vector3({}f, {}f, {}f);\n"_sv,         position.x, position.y, position.z);
 		IO::print("camera.rotation = Quaternion({}f, {}f, {}f, {}f);\n"_sv, rotation.x, rotation.y, rotation.z, rotation.w);
+		IO::print("degree of rotation = {};\n"_sv, rotation.w * 180.0f / PI);
 	}
 	if (Input::is_key_pressed(SDL_SCANCODE_G)) {
 		rotation = Quaternion(0.0f, 0.0f, 0.0f, 1.0f); // Reset

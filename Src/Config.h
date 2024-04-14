@@ -47,6 +47,7 @@ struct CPUConfig {
 	bool enable_bvh_optimization  = false;
 	bool enable_block_compression = true;
 	bool enable_scene_update      = false;
+	bool enable_bvh_collapse	  = false;
 
 	MipmapFilterType mipmap_filter = MipmapFilterType::BOX;
 	int max_frames = -1;

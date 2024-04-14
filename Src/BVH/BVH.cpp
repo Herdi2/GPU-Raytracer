@@ -12,6 +12,49 @@
 #include "BVH/BVHOptimizer.h"
 #include <iostream>
 
+#include "Core/IO.h"
+
+void print_node_info(Array<BVHNode2> nodes) {
+	IO::print("BVH2 Node count: {}\n"_sv, nodes.size());
+	IO::print("BVH2 Average branching factor: 2\n"_sv); // Per definition, since every space is split into two, or made a leaf
+}
+
+void print_node_info(Array<BVHNode4> nodes) {
+	// Even though the amount of nodes loaded into the GPU is equal to
+	// the amount of nodes for BVH2, the used nodes are less
+	// Empty nodes are not removed from the node array
+	size_t empty_node_count = 0;
+	double child_count = 0;
+	for (size_t i = 0; i < nodes.size(); i++) {
+		const auto& node = nodes[i];
+		if (node.get_count(0) == 0 && node.get_index(0) == 0 &&
+			node.get_count(1) == 0 && node.get_index(1) == 0 &&
+			node.get_count(2) == 0 && node.get_index(2) == 0 &&
+			node.get_count(3) == 0 && node.get_index(3) == 0) {
+			empty_node_count++;
+		}
+		else {
+			child_count += node.get_child_count();
+		}
+	}
+	IO::print("BVH4 Node count: {}\n"_sv, nodes.size() - empty_node_count);
+	IO::print("BVH4 Average branching factor: {}\n"_sv, child_count / (nodes.size() - empty_node_count));
+}
+
+void print_node_info(Array<BVHNode8> nodes) {
+	IO::print("BVH8 Node count: {}\n"_sv, nodes.size());
+	double child_count = 0;
+	for (size_t i = 0; i < nodes.size(); i++) {
+		const auto& node = nodes[i];
+		for (size_t j = 0; j < 8; j++) {
+			if (node.meta[j] != 0) {
+				child_count++;
+			}
+		}
+	}
+	IO::print("BVH8 Average branching factor: {}\n"_sv, child_count / nodes.size());
+}
+
 BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 	IO::print("Constructing BVH...\r"_sv);
 
@@ -39,19 +82,28 @@ BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 OwnPtr<BVH> BVH::create_from_bvh2(BVH2 bvh) {
 	switch (cpu_config.bvh_type) {
 		case BVHType::BVH:
+			print_node_info(bvh.nodes);
+			return make_owned<BVH2>(std::move(bvh));
 		case BVHType::SBVH: {
+			print_node_info(bvh.nodes);
 			return make_owned<BVH2>(std::move(bvh));
 		}
 		case BVHType::BVH4: {
 			// Collapse binary BVH into 4-way BVH
 			OwnPtr<BVH4> bvh4 = make_owned<BVH4>();
+			ScopeTimer timer("BVH4 Converter"_sv);
 			BVH4Converter(*bvh4.get(), bvh).convert();
+			print_node_info(bvh4.get()->nodes);
 			return bvh4;
 		}
 		case BVHType::BVH8: {
 			// Collapse binary BVH into 8-way Compressed Wide BVH
 			OwnPtr<BVH8> bvh8 = make_owned<BVH8>();
-			BVH8Converter(*bvh8.get(), bvh).convert();
+			{
+				ScopeTimer timer("BVH8 Converter"_sv);
+				BVH8Converter(*bvh8.get(), bvh).convert();
+			}
+			print_node_info(bvh8.get()->nodes);
 			return bvh8;
 		}
 		default: ASSERT_UNREACHABLE();

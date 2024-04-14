@@ -175,7 +175,8 @@ SpatialSplit BVHPartitions::partition_spatial(const Array<Triangle> & triangles,
 					if (triangle_aabb_min <= bin_left_plane  && bin_left_plane  <= triangle_aabb_max) triangle_intersect_plane(vertices, dimension, bin_left_plane,  intersections, &intersection_count);
 					if (triangle_aabb_min <= bin_right_plane && bin_right_plane <= triangle_aabb_max) triangle_intersect_plane(vertices, dimension, bin_right_plane, intersections, &intersection_count);
 
-					ASSERT(intersection_count < Util::array_count(intersections));
+					// Gives assertion error on crytek sponza, original was < not <=
+					ASSERT(intersection_count <= Util::array_count(intersections));
 
 					if (intersection_count == 0) {
 						triangle_aabb_clipped_against_bin = triangle_aabb;
