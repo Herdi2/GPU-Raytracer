@@ -1,60 +1,77 @@
 #include "BVH4Converter.h"
-#include "Core/IO.h"
 
 void BVH4Converter::convert() {
 	bvh4.nodes.resize(bvh2.nodes.size());
+	size_t write_i = 0;
 
+	Array<size_t> remapped(bvh2.nodes.size());
+	for (size_t i = 0; i < bvh4.nodes.size(); i++) {
+		if (i == 1 || !bvh2.nodes[i].is_leaf()) {
+			remapped[i] = write_i;
+			write_i++;
+		}
+		else {
+			remapped[i] = 1;
+		}
+	}
+
+	write_i = 0;
 	for (size_t i = 0; i < bvh4.nodes.size(); i++) {
 		// We use index 1 as a starting point, such that it points to the first child of the root
 		if (i == 1) {
-			bvh4.nodes[i].get_index(0) = 0;
-			bvh4.nodes[i].get_count(0) = 0;
+			bvh4.nodes[write_i].get_index(0) = 0;
+			bvh4.nodes[write_i].get_count(0) = 0;
+			write_i += 1;
 			continue;
 		}
 
-		// Converting the binary tree to a quaternary tree (Nothing else is done here)
 		if (!bvh2.nodes[i].is_leaf()) {
-			const BVHNode2 & child_left  = bvh2.nodes[bvh2.nodes[i].left];
-			const BVHNode2 & child_right = bvh2.nodes[bvh2.nodes[i].left + 1];
+			const BVHNode2& child_left = bvh2.nodes[bvh2.nodes[i].left];
+			const BVHNode2& child_right = bvh2.nodes[bvh2.nodes[i].left + 1];
 
-			bvh4.nodes[i].aabb_min_x[0] = child_left.aabb.min.x;
-			bvh4.nodes[i].aabb_min_y[0] = child_left.aabb.min.y;
-			bvh4.nodes[i].aabb_min_z[0] = child_left.aabb.min.z;
-			bvh4.nodes[i].aabb_max_x[0] = child_left.aabb.max.x;
-			bvh4.nodes[i].aabb_max_y[0] = child_left.aabb.max.y;
-			bvh4.nodes[i].aabb_max_z[0] = child_left.aabb.max.z;
-			bvh4.nodes[i].aabb_min_x[1] = child_right.aabb.min.x;
-			bvh4.nodes[i].aabb_min_y[1] = child_right.aabb.min.y;
-			bvh4.nodes[i].aabb_min_z[1] = child_right.aabb.min.z;
-			bvh4.nodes[i].aabb_max_x[1] = child_right.aabb.max.x;
-			bvh4.nodes[i].aabb_max_y[1] = child_right.aabb.max.y;
-			bvh4.nodes[i].aabb_max_z[1] = child_right.aabb.max.z;
-
+			bvh4.nodes[write_i].aabb_min_x[0] = child_left.aabb.min.x;
+			bvh4.nodes[write_i].aabb_min_y[0] = child_left.aabb.min.y;
+			bvh4.nodes[write_i].aabb_min_z[0] = child_left.aabb.min.z;
+			bvh4.nodes[write_i].aabb_max_x[0] = child_left.aabb.max.x;
+			bvh4.nodes[write_i].aabb_max_y[0] = child_left.aabb.max.y;
+			bvh4.nodes[write_i].aabb_max_z[0] = child_left.aabb.max.z;
+			bvh4.nodes[write_i].aabb_min_x[1] = child_right.aabb.min.x;
+			bvh4.nodes[write_i].aabb_min_y[1] = child_right.aabb.min.y;
+			bvh4.nodes[write_i].aabb_min_z[1] = child_right.aabb.min.z;
+			bvh4.nodes[write_i].aabb_max_x[1] = child_right.aabb.max.x;
+			bvh4.nodes[write_i].aabb_max_y[1] = child_right.aabb.max.y;
+			bvh4.nodes[write_i].aabb_max_z[1] = child_right.aabb.max.z;
+			// count = 0 => index into node list
+			// otherwise => trinagle index
 			if (child_left.is_leaf()) {
-				bvh4.nodes[i].get_index(0) = child_left.first;
-				bvh4.nodes[i].get_count(0) = child_left.count;
-			} else {
-				bvh4.nodes[i].get_index(0) = bvh2.nodes[i].left;
-				bvh4.nodes[i].get_count(0) = 0;
+				bvh4.nodes[write_i].get_index(0) = child_left.count ? child_left.first : remapped[child_left.first];
+				bvh4.nodes[write_i].get_count(0) = child_left.count;
+			}
+			else {
+				bvh4.nodes[write_i].get_index(0) = remapped[bvh2.nodes[i].left];
+				bvh4.nodes[write_i].get_count(0) = 0;
 			}
 
 			if (child_right.is_leaf()) {
-				bvh4.nodes[i].get_index(1) = child_right.first;
-				bvh4.nodes[i].get_count(1) = child_right.count;
-			} else {
-				bvh4.nodes[i].get_index(1) = bvh2.nodes[i].left + 1;
-				bvh4.nodes[i].get_count(1) = 0;
+				bvh4.nodes[write_i].get_index(1) = child_right.count ? child_right.first : remapped[child_right.first];
+				bvh4.nodes[write_i].get_count(1) = child_right.count;
+			}
+			else {
+				bvh4.nodes[write_i].get_index(1) = remapped[bvh2.nodes[i].left + 1];
+				bvh4.nodes[write_i].get_count(1) = 0;
 			}
 
 			// For now the tree is binary,
 			// so make the rest of the indices invalid
 			for (int j = 2; j < 4; j++) {
-				bvh4.nodes[i].get_index(j) = INVALID;
-				bvh4.nodes[i].get_count(j) = INVALID;
+				bvh4.nodes[write_i].get_index(j) = INVALID;
+				bvh4.nodes[write_i].get_count(j) = INVALID;
 			}
+			write_i += 1;
 		}
-	}
 
+	}
+	bvh4.nodes.resize(write_i);
 	// Handle the special case where the root is a leaf
 	if (bvh2.nodes[0].is_leaf()) {
 		bvh4.nodes[0].aabb_min_x[0] = bvh2.nodes[0].aabb.min.x;
@@ -71,25 +88,23 @@ void BVH4Converter::convert() {
 			bvh4.nodes[0].get_index(i) = INVALID;
 			bvh4.nodes[0].get_count(i) = INVALID;
 		}
-	} else {
+	}
+	else {
 		// Collapse tree top-down, starting from the root
 		collapse(0);
-		// Possible optimization, remove recursion from collapse() as well -Herdi
-		//for (size_t i = 0; i < bvh4.nodes.size(); i++) {
-		//	collapse(i);
-		//}
 	}
 
 	bvh4.indices = bvh2.indices; // NOTE: copy
 }
-// SAH collapsing based only on merging a child node into its parent -Herdi
+
 void BVH4Converter::collapse(int node_index) {
-   	BVHNode4 & node = bvh4.nodes[node_index];
+	BVHNode4& node = bvh4.nodes[node_index];
+
 	while (true) {
 		int child_count = node.get_child_count();
 
 		// Look for adoptable child with the largest surface area
-		float max_area  = -INFINITY;
+		float max_area = -INFINITY;
 		int   max_index = INVALID;
 
 		for (int i = 0; i < child_count; i++) {
@@ -105,7 +120,7 @@ void BVH4Converter::collapse(int node_index) {
 					float half_area = diff_x * diff_y + diff_y * diff_z + diff_z * diff_x;
 
 					if (half_area > max_area) {
-						max_area  = half_area;
+						max_area = half_area;
 						max_index = i;
 					}
 				}
@@ -115,7 +130,7 @@ void BVH4Converter::collapse(int node_index) {
 		// No merge possible anymore, stop trying
 		if (max_index == INVALID) break;
 
-		const BVHNode4 & max_child = bvh4.nodes[node.get_index(max_index)];
+		const BVHNode4& max_child = bvh4.nodes[node.get_index(max_index)];
 
 		// Replace max child Node with its first child
 		node.aabb_min_x[max_index] = max_child.aabb_min_x[0];
