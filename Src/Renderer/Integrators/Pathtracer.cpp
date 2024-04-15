@@ -103,7 +103,9 @@ void Pathtracer::init_module() {
 	switch (cpu_config.bvh_type) {
 		case BVHType::BVH:
 		case BVHType::SBVH: kernel_trace = &kernel_trace_bvh2; kernel_trace_shadow = &kernel_trace_shadow_bvh2; break;
+		case BVHType::SBVH4:
 		case BVHType::BVH4: kernel_trace = &kernel_trace_bvh4; kernel_trace_shadow = &kernel_trace_shadow_bvh4; break;
+		case BVHType::SBVH8:
 		case BVHType::BVH8: kernel_trace = &kernel_trace_bvh8; kernel_trace_shadow = &kernel_trace_shadow_bvh8; break;
 		default: ASSERT_UNREACHABLE();
 	}

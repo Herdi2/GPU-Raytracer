@@ -76,6 +76,10 @@ static void parse_args(const Array<StringView> & args, Allocator * allocator) {
 			cpu_config.bvh_type = BVHType::SBVH;
 		} else if (args[i + 1] == "bvh4") {
 			cpu_config.bvh_type = BVHType::BVH4;
+		} else if (args[i + 1] == "sbvh4") {
+			cpu_config.bvh_type = BVHType::SBVH4;
+		} else if (args[i + 1] == "sbvh8") {
+			cpu_config.bvh_type = BVHType::SBVH8;
 		} else if (args[i + 1] == "bvh8") {
 			cpu_config.bvh_type = BVHType::BVH8;
 		} else {

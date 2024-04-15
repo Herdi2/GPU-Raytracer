@@ -362,10 +362,12 @@ static void draw_gui(Window & window, Integrator & integrator) {
 			ImGui::Text("Max:   %.2f ms", 1000.0f * timing.max);
 
 			switch (cpu_config.bvh_type) {
-				case BVHType::BVH:  ImGui::TextUnformatted("BVH:   BVH");  break;
-				case BVHType::SBVH: ImGui::TextUnformatted("BVH:   SBVH"); break;
-				case BVHType::BVH4: ImGui::TextUnformatted("BVH:   BVH4"); break;
-				case BVHType::BVH8: ImGui::TextUnformatted("BVH:   BVH8"); break;
+				case BVHType::BVH:   ImGui::TextUnformatted("BVH:   BVH");   break;
+				case BVHType::SBVH:  ImGui::TextUnformatted("BVH:   SBVH");  break;
+				case BVHType::BVH4:  ImGui::TextUnformatted("BVH:   BVH4");  break;
+				case BVHType::SBVH4: ImGui::TextUnformatted("BVH:   SBVH4"); break;
+				case BVHType::BVH8:  ImGui::TextUnformatted("BVH:   BVH8");  break;
+				case BVHType::SBVH8: ImGui::TextUnformatted("BVH:   SBVH8"); break;
 			}
 		}
 

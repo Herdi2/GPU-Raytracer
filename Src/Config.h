@@ -23,10 +23,12 @@ enum struct MipmapFilterType {
 };
 
 enum struct BVHType {
-	BVH,  // Binary SAH-based BVH
-	SBVH, // Binary SAH-based Spatial BVH
-	BVH4, // Quaternary BVH,              constructed by collapsing the binary BVH
-	BVH8  // Compressed Wide BVH (8 way), constructed by collapsing the binary BVH
+	BVH,   // Binary SAH-based BVH
+	SBVH,  // Binary SAH-based Spatial BVH
+	BVH4,  // Quaternary BVH,              constructed by collapsing the binary BVH
+	BVH8,  // Compressed Wide BVH (8 way), constructed by collapsing the binary BVH
+	SBVH4, // Quaternary BVH,              constructed by collapsing the binary SBVH
+	SBVH8, // Compressed Wide BVH (8 way), constructed by collapsing the binary SBVH
 };
 
 struct CPUConfig {

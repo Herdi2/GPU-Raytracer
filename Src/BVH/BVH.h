@@ -95,7 +95,7 @@ struct BVH {
 
 	static BVHType underlying_bvh_type() {
 		// All BVH use standard BVH as underlying type, only SBVH uses SBVH
-		if (cpu_config.bvh_type == BVHType::SBVH) {
+		if (cpu_config.bvh_type == BVHType::SBVH || cpu_config.bvh_type == BVHType::SBVH4 || cpu_config.bvh_type == BVHType::SBVH8) {
 			return BVHType::SBVH;
 		} else {
 			return BVHType::BVH;

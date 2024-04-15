@@ -41,25 +41,27 @@ void print_cwbvh(const BVH8& bvh, int node_index = 0) {
 }
 
 void print_node_info(Array<BVHNode2> nodes) {
-	
-	IO::print(cpu_config.bvh_type == BVHType::BVH ? "BVH2 Node count: {}\n"_sv : "SBVH Node count: {}\n"_sv, nodes.size());
+	String bvh_type = cpu_config.bvh_type == BVHType::BVH ? "BVH" : "SBVH";
+	IO::print("{} Node count: {}\n"_sv, bvh_type, nodes.size());
 	// Per definition, since every space is split into two, or made a leaf
-	IO::print(cpu_config.bvh_type == BVHType::BVH ? "BVH2 Average branching factor: 2 {}\n"_sv : "SBVH Average branching factor: 2{}\n"_sv); 
+	IO::print("{} Average branching factor: 2 {}\n"_sv, bvh_type); 
 }
 
 void print_node_info(Array<BVHNode4> nodes) {
+	String bvh_type = cpu_config.bvh_type == BVHType::BVH4 ? "BVH4" : "SBVH4";
 	double child_count = 0;
 	for (size_t i = 0; i < nodes.size(); i++) {
 		const auto& node = nodes[i];
 		child_count += node.get_child_count();
 
 	}
-	IO::print("BVH4 Node count: {}\n"_sv, nodes.size());
-	IO::print("BVH4 Average branching factor: {}\n"_sv, child_count / nodes.size());
+	IO::print("{} Node count: {}\n"_sv, bvh_type, nodes.size());
+	IO::print("{} Average branching factor: {}\n"_sv, bvh_type, child_count / nodes.size());
 }
 
 void print_node_info(Array<BVHNode8> nodes) {
-	IO::print("BVH8 Node count: {}\n"_sv, nodes.size());
+	String bvh_type = cpu_config.bvh_type == BVHType::BVH8 ? "BVH8" : "SBVH8";
+	IO::print("{} Node count: {}\n"_sv, bvh_type, nodes.size());
 	double child_count = 0;
 	for (size_t i = 0; i < nodes.size(); i++) {
 		const auto& node = nodes[i];
@@ -70,7 +72,7 @@ void print_node_info(Array<BVHNode8> nodes) {
 		}
 	}
 
-	IO::print("BVH8 Average branching factor: {}\n"_sv, child_count / nodes.size());
+	IO::print("{} Average branching factor: {}\n"_sv, bvh_type, child_count / nodes.size());
 }
 
 BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
@@ -80,7 +82,7 @@ BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 
 	// Only the SBVH uses SBVH as its starting point,
 	// all other BVH types use the standard BVH as their starting point
-	if (cpu_config.bvh_type == BVHType::SBVH) {
+	if (cpu_config.bvh_type == BVHType::SBVH || cpu_config.bvh_type == BVHType::SBVH4 || cpu_config.bvh_type == BVHType::SBVH8) {
 		ScopeTimer timer("SBVH Construction"_sv);
 
 		SBVHBuilder(bvh, triangles.size()).build(triangles);
@@ -100,12 +102,11 @@ BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 OwnPtr<BVH> BVH::create_from_bvh2(BVH2 bvh) {
 	switch (cpu_config.bvh_type) {
 		case BVHType::BVH:
-			print_node_info(bvh.nodes);
-			return make_owned<BVH2>(std::move(bvh));
 		case BVHType::SBVH: {
 			print_node_info(bvh.nodes);
 			return make_owned<BVH2>(std::move(bvh));
 		}
+		case BVHType::SBVH4:
 		case BVHType::BVH4: {
 			// Collapse binary BVH into 4-way BVH
 			OwnPtr<BVH4> bvh4 = make_owned<BVH4>();
@@ -116,6 +117,7 @@ OwnPtr<BVH> BVH::create_from_bvh2(BVH2 bvh) {
 			print_node_info(bvh4.get()->nodes);
 			return bvh4;
 		}
+		case BVHType::SBVH8:
 		case BVHType::BVH8: {
 			// Collapse binary BVH into 8-way Compressed Wide BVH
 			OwnPtr<BVH8> bvh8 = make_owned<BVH8>();

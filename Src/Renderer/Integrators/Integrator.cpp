@@ -213,6 +213,7 @@ void Integrator::init_geometry() {
 			tlas_converter = make_owned<BVH2Converter>(static_cast<BVH2 &>(*tlas.get()), tlas_raw);
 			break;
 		}
+		case BVHType::SBVH4:
 		case BVHType::BVH4: {
 			Array<BVHNode4> aggregated_bvh_nodes(aggregated_bvh_node_count);
 
@@ -249,6 +250,7 @@ void Integrator::init_geometry() {
 			tlas_converter = make_owned<BVH4Converter>(static_cast<BVH4 &>(*tlas.get()), tlas_raw);
 			break;
 		}
+		case BVHType::SBVH8:
 		case BVHType::BVH8: {
 			Array<BVHNode8> aggregated_bvh_nodes(aggregated_bvh_node_count);
 
@@ -403,7 +405,9 @@ void Integrator::build_tlas() {
 	switch (cpu_config.bvh_type) {
 		case BVHType::BVH:
 		case BVHType::SBVH: CUDAMemory::memcpy_async(ptr_bvh_nodes_2, static_cast<BVH2 *>(tlas.get())->nodes.data(), tlas->node_count(), memory_stream); break;
+		case BVHType::SBVH4:
 		case BVHType::BVH4: CUDAMemory::memcpy_async(ptr_bvh_nodes_4, static_cast<BVH4 *>(tlas.get())->nodes.data(), tlas->node_count(), memory_stream); break;
+		case BVHType::SBVH8:
 		case BVHType::BVH8: CUDAMemory::memcpy_async(ptr_bvh_nodes_8, static_cast<BVH8 *>(tlas.get())->nodes.data(), tlas->node_count(), memory_stream); break;
 		default: ASSERT_UNREACHABLE();
 	}
