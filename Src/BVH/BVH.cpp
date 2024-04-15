@@ -84,8 +84,9 @@ BVH2 BVH::create_from_triangles(const Array<Triangle> & triangles) {
 	// all other BVH types use the standard BVH as their starting point
 	if (cpu_config.bvh_type == BVHType::SBVH || cpu_config.bvh_type == BVHType::SBVH4 || cpu_config.bvh_type == BVHType::SBVH8) {
 		ScopeTimer timer("SBVH Construction"_sv);
-
-		SBVHBuilder(bvh, triangles.size()).build(triangles);
+		long* split_ratio;
+		split_ratio = SBVHBuilder(bvh, triangles.size()).build(triangles);
+		printf("Amount of object splits: %ld\nAmount of spatial splits: %ld\n", split_ratio[0], split_ratio[1]);
 	} else  {
 		ScopeTimer timer("BVH Construction"_sv);
 

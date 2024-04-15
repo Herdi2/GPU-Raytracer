@@ -9,7 +9,7 @@
 
 #include "BVHPartitions.h"
 
-void SBVHBuilder::build(const Array<Triangle> & triangles) {
+long * SBVHBuilder::build(const Array<Triangle> & triangles) {
 	IO::print("Construcing SBVH, this may take a few seconds for large Meshes...\n"_sv);
 
 	AABB root_aabb = AABB::create_empty();
@@ -62,6 +62,7 @@ void SBVHBuilder::build(const Array<Triangle> & triangles) {
 
 		sbvh.indices[i] = index;
 	}
+	return split_ratio;
 }
 
 int SBVHBuilder::build_sbvh(int node_index, const Array<Triangle> & triangles, int first_index, int index_count) {
@@ -118,6 +119,7 @@ int SBVHBuilder::build_sbvh(int node_index, const Array<Triangle> & triangles, i
 	// The two temp arrays will be used as lookup tables
 	if (object_split.cost <= spatial_split.cost) {
 		// Perform Object Split
+		split_ratio[0]++; // Increment count of object splits performed
 
 		sbvh.nodes[node_index].count = 0;
 		sbvh.nodes[node_index].axis  = object_split.dimension;
@@ -153,6 +155,7 @@ int SBVHBuilder::build_sbvh(int node_index, const Array<Triangle> & triangles, i
 		child_aabb_right = object_split.aabb_right;
 	} else {
 		// Perform Spatial Split
+		split_ratio[1]++; // Increment count of spatial splits performed
 
 		sbvh.nodes[node_index].count = 0;
 		sbvh.nodes[node_index].axis  = spatial_split.dimension;
